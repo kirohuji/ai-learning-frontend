@@ -1,6 +1,9 @@
 # 构建阶段
 FROM node:20-alpine
 
+# Install pnpm globally using Chinese mirror
+RUN npm install -g yarn
+
 WORKDIR /app
 
 # 设置 Yarn 国内镜像源
@@ -13,7 +16,7 @@ COPY .env.production .env
 COPY package.json yarn.lock ./
 
 # 安装依赖
-RUN yarn install --frozen-lockfile
+RUN yarn instal
 
 # 复制项目文件
 COPY . .
