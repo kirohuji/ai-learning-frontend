@@ -87,7 +87,7 @@ export default function ChatDetailPage({ params }: { params: { id: string } }) {
       setMessages((prev) => [...prev, assistantMessage]);
 
       await fetchEventSource(
-        `http://localhost:4000/conversations/${params.id}/message?message=${message}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/conversations/${params.id}/message?message=${message}`,
         {
           openWhenHidden: true,
           ...requestOptions,
