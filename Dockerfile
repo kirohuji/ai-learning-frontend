@@ -25,4 +25,5 @@ RUN yarn build
 EXPOSE 5050
 
 # 启动生产环境
-CMD ["yarn", "start"] 
+ENV NODE_ENV=production
+CMD ["node", "node_modules/.bin/next", "start", "-p", "5050"] 
