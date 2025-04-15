@@ -82,9 +82,7 @@ export const authApi = {
     api.post<TokenResponse>("/auth/login/sms", data).then((res) => res.data),
 
   register: (data: RegisterRequest) =>
-    api
-      .post<{ data: TokenResponse }>("/auth/register", data)
-      .then((res) => res.data),
+    api.post<TokenResponse>("/auth/register", data).then((res) => res.data),
 
   getProfile: () =>
     api.get<UserProfile>("/auth/profile").then((res) => res.data),

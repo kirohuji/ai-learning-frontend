@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { conversationApi } from "@/lib/api";
 import { ChatMessage } from "@/types/api";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -135,8 +135,8 @@ export default function ChatDetailPage({ params }: { params: { id: string } }) {
               <div
                 className={`rounded-lg px-4 py-3 ${
                   msg.role === "user"
-                    ? "bg-[hsl(0,100%,99.2%)] text-gray-900 shadow-sm max-w-[80%]"
-                    : "text-gray-900 max-w-[80%]"
+                    ? "bg-[hsl(0,100%,99.2%)] text-gray-900 shadow-sm max-w-[80%] md:max-w-[80%]"
+                    : "text-gray-900 max-w-[100%] md:max-w-[80%]"
                 }`}
               >
                 <div className="prose prose-sm max-w-none dark:prose-invert">
@@ -184,18 +184,18 @@ export default function ChatDetailPage({ params }: { params: { id: string } }) {
           <div ref={messagesEndRef} />
         </div>
       </div>
-      <div className="border-t bg-white px-4 py-4 dark:bg-gray-800">
+      <div className="border-t bg-white px-1 py-1 dark:bg-gray-800">
         <div className="mx-auto max-w-3xl">
-          <div className="flex items-center gap-4">
-            <Input
+          <div className="flex items-end gap-2 rounded-lg bg-gray-50 p-2 dark:bg-gray-700">
+            <Textarea
               value={message}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                 setMessage(e.target.value)
               }
               placeholder="输入消息..."
               disabled={loading}
-              className="flex-1"
-              onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => {
+              className="min-h-[60px] resize-none bg-transparent"
+              onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   handleSendMessage();
@@ -205,7 +205,7 @@ export default function ChatDetailPage({ params }: { params: { id: string } }) {
             <Button
               onClick={handleSendMessage}
               disabled={loading || !message.trim()}
-              className="h-10 w-10 rounded-full p-0"
+              className="h-8 w-8 rounded-full bg-primary p-0 hover:bg-primary/90"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -215,7 +215,7 @@ export default function ChatDetailPage({ params }: { params: { id: string } }) {
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="h-5 w-5"
+                className="h-4 w-4"
               >
                 <path d="M22 2L11 13" />
                 <path d="M22 2L15 22L11 13L2 9L22 2Z" />

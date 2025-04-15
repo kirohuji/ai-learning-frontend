@@ -2,46 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { conversationApi, authApi } from "@/lib/api";
-import { Conversation, UserProfile } from "@/types/api";
+import { conversationApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, Trash2, LogOut } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-
-const formatTimeAgo = (dateString: string) => {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-  if (diffInSeconds < 60) {
-    return "刚刚";
-  }
-
-  const diffInMinutes = Math.floor(diffInSeconds / 60);
-  if (diffInMinutes < 60) {
-    return `${diffInMinutes}分钟前`;
-  }
-
-  const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours < 24) {
-    return `${diffInHours}小时前`;
-  }
-
-  const diffInDays = Math.floor(diffInHours / 24);
-  if (diffInDays < 30) {
-    return `${diffInDays}天前`;
-  }
-
-  const diffInMonths = Math.floor(diffInDays / 30);
-  if (diffInMonths < 12) {
-    return `${diffInMonths}个月前`;
-  }
-
-  const diffInYears = Math.floor(diffInMonths / 12);
-  return `${diffInYears}年前`;
-};
+import { Menu, Search, Trash2 } from "lucide-react";
+import { Conversation } from "@/types/api";
+import { LoadingSpinner } from "@/components/ui/loading";
 
 export default function ChatLayout({
   children,
@@ -53,9 +20,8 @@ export default function ChatLayout({
     Conversation[]
   >([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [userInfo, setUserInfo] = useState<UserProfile | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -65,17 +31,6 @@ export default function ChatLayout({
       router.push("/login");
       return;
     }
-
-    const fetchUserProfile = async () => {
-      try {
-        const { data } = await authApi.getUserProfile();
-        setUserInfo(data);
-      } catch (error) {
-        console.error("获取用户信息失败:", error);
-      }
-    };
-
-    fetchUserProfile();
     fetchConversations();
   }, []);
 
@@ -92,70 +47,82 @@ export default function ChatLayout({
 
   const fetchConversations = async () => {
     try {
-      setError("");
-      setLoading(true);
-      const { data } = await conversationApi.getConversations();
-      setConversations(data.list);
-      setFilteredConversations(data.list);
-    } catch (error: any) {
-      setError(error.response?.data?.message || "获取对话列表失败");
-    } finally {
-      setLoading(false);
+      const response = await conversationApi.getConversations();
+      if (response.data) {
+        setConversations(response.data.list);
+        setFilteredConversations(response.data.list);
+      }
+    } catch (error) {
+      console.error("获取会话列表失败:", error);
     }
   };
 
   const handleCreateConversation = async () => {
     try {
-      setError("");
       const response = await conversationApi.createConversation("新对话", "");
-      setConversations((prev) => [response, ...prev]);
-      setFilteredConversations((prev) => [response, ...prev]);
       router.push(`/chat/${response.id}`);
-    } catch (error: any) {
-      setError(error.response?.data?.message || "创建对话失败");
+      setIsSidebarOpen(false);
+    } catch (error) {
+      console.error("创建会话失败:", error);
+    }
+  };
+
+  const handleConversationClick = async (id: string) => {
+    if (pathname === `/chat/${id}`) return;
+    setIsLoading(true);
+    setIsSidebarOpen(false);
+    try {
+      await router.push(`/chat/${id}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!confirm("确定要删除这个对话吗？")) return;
-
-    try {
-      setError("");
-      await conversationApi.deleteConversation(id);
-      setConversations((prev) => prev.filter((conv) => conv.id !== id));
-      setFilteredConversations((prev) => prev.filter((conv) => conv.id !== id));
-      if (pathname === `/chat/${id}`) {
-        router.push("/chat");
+    e.stopPropagation(); // 阻止事件冒泡，避免触发会话点击
+    if (window.confirm("确定要删除这个会话吗？")) {
+      try {
+        await conversationApi.deleteConversation(id);
+        setConversations(conversations.filter((conv) => conv.id !== id));
+        setFilteredConversations(
+          filteredConversations.filter((conv) => conv.id !== id)
+        );
+        if (pathname === `/chat/${id}`) {
+          router.push("/chat");
+        }
+      } catch (error) {
+        console.error("删除会话失败:", error);
       }
-    } catch (error: any) {
-      setError(error.response?.data?.message || "删除对话失败");
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    router.push("/login");
-  };
-
   return (
-    <div className="flex h-screen">
-      <div className="flex w-64 flex-col border-r bg-gray-50">
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">对话列表</h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCreateConversation}
-              disabled={loading}
-            >
+    <div className="flex h-screen flex-col md:flex-row">
+      {/* Mobile Header */}
+      <div className="flex h-16 items-center justify-between border-b px-4 md:hidden">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        >
+          <Menu className="h-6 w-6" />
+        </Button>
+        <h1 className="text-xl font-semibold">AI 助手</h1>
+        <div className="w-10" /> {/* 占位，保持标题居中 */}
+      </div>
+
+      {/* Sidebar */}
+      <div
+        className={`fixed inset-y-0 left-0 z-50 w-64 transform bg-white transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex h-full flex-col border-r">
+          <div className="flex-1 overflow-y-auto p-4">
+            <Button className="mb-4 w-full" onClick={handleCreateConversation}>
               新建对话
             </Button>
-          </div>
-          <div className="mb-4">
-            <div className="relative">
+            <div className="relative mb-4">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
               <Input
                 placeholder="搜索对话..."
@@ -164,71 +131,60 @@ export default function ChatLayout({
                 className="pl-8"
               />
             </div>
-          </div>
-          {error && (
-            <div className="mb-4 rounded-md bg-red-50 p-4 text-sm text-red-500">
-              {error}
+            <div className="space-y-2">
+              {filteredConversations.map((conversation) => (
+                <Card
+                  key={conversation.id}
+                  className={`cursor-pointer transition-colors hover:bg-gray-50 ${
+                    pathname === `/chat/${conversation.id}` ? "bg-blue-50" : ""
+                  }`}
+                  onClick={() => handleConversationClick(conversation.id)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-medium">{conversation.title}</h3>
+                        <p className="text-sm text-gray-500">
+                          {new Date(conversation.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-gray-500 hover:text-red-500"
+                        onClick={(e) =>
+                          handleDeleteConversation(conversation.id, e)
+                        }
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          )}
-          <div className="space-y-2">
-            {filteredConversations.map((conversation) => (
-              <Card
-                key={conversation.id}
-                className={`group cursor-pointer transition-colors hover:bg-gray-100 ${
-                  pathname === `/chat/${conversation.id}` ? "bg-gray-100" : ""
-                }`}
-                onClick={() => router.push(`/chat/${conversation.id}`)}
-              >
-                <CardContent className="p-3">
-                  <div className="flex items-start justify-between">
-                    <h3 className="font-medium">{conversation.title}</h3>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
-                      onClick={(e) =>
-                        handleDeleteConversation(conversation.id, e)
-                      }
-                    >
-                      <Trash2 className="h-4 w-4 text-gray-500" />
-                    </Button>
-                  </div>
-                  <p className="mt-1 text-xs text-gray-500">
-                    {formatTimeAgo(conversation.createdAt)}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-        <div className="border-t p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Avatar className="h-8 w-8">
-                <AvatarImage
-                  src={userInfo?.avatar || undefined}
-                  alt={userInfo?.phone || "用户"}
-                />
-                <AvatarFallback>
-                  {userInfo?.phone ? userInfo.phone.slice(-2) : "用户"}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-sm font-medium">
-                {userInfo?.phone || "用户"}
-              </span>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleLogout}
-              className="h-8 w-8"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
           </div>
         </div>
       </div>
-      <div className="flex-1">{children}</div>
+
+      {/* Main Content */}
+      <div className="flex-1 overflow-hidden">
+        {isLoading ? (
+          <div className="flex h-full w-full items-center justify-center">
+            <LoadingSpinner />
+          </div>
+        ) : (
+          children
+        )}
+      </div>
+
+      {/* Overlay for mobile */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
     </div>
   );
 }
