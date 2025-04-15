@@ -6,9 +6,6 @@ WORKDIR /app
 # 设置 Yarn 国内镜像源
 RUN yarn config set registry https://registry.npmmirror.com
 
-# 全局安装 next
-RUN yarn global add next
-
 # Copy environment file
 COPY .env.production .env
 
@@ -29,4 +26,4 @@ EXPOSE 5050
 
 # 启动生产环境
 ENV NODE_ENV=production
-CMD ["next", "start", "-p", "5050"] 
+CMD ["npx", "next", "start", "-p", "5050"] 
