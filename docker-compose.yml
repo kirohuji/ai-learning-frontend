@@ -12,5 +12,4 @@ services:
       - PORT=5050
     volumes:
       - .:/app
-      - /app/node_modules
     restart: unless-stopped
