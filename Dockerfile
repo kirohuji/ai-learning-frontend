@@ -22,7 +22,7 @@ COPY . .
 RUN yarn build
 
 # 暴露端口
-EXPOSE 3000
+EXPOSE 5050
 
 # 启动生产环境
 CMD ["yarn", "start"] 
