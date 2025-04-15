@@ -1,9 +1,6 @@
 # 构建阶段
 FROM node:20-alpine
 
-# Install pnpm globally using Chinese mirror
-RUN npm install -g yarn
-
 WORKDIR /app
 
 # 设置 Yarn 国内镜像源
