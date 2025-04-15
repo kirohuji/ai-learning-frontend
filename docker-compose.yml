@@ -6,12 +6,10 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "5000:5000"
+      - "5050:5050"
     environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
       - NODE_ENV=production
-    env_file:
-      - .env
+      - PORT=5050
     volumes:
       - .:/app
       - /app/node_modules
