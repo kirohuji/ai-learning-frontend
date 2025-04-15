@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { conversationApi } from "@/lib/api";
+import { conversationApi, authApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Menu, Search, Trash2 } from "lucide-react";
-import { Conversation } from "@/types/api";
+import { Menu, Search, Trash2, LogOut } from "lucide-react";
+import { Conversation, UserProfile } from "@/types/api";
 import { LoadingSpinner } from "@/components/ui/loading";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 export default function ChatLayout({
   children,
@@ -22,6 +23,7 @@ export default function ChatLayout({
   const [searchQuery, setSearchQuery] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -32,6 +34,7 @@ export default function ChatLayout({
       return;
     }
     fetchConversations();
+    fetchUserProfile();
   }, []);
 
   useEffect(() => {
@@ -54,6 +57,17 @@ export default function ChatLayout({
       }
     } catch (error) {
       console.error("获取会话列表失败:", error);
+    }
+  };
+
+  const fetchUserProfile = async () => {
+    try {
+      const response = await authApi.getUserProfile();
+      if (response.success) {
+        setUserProfile(response.data);
+      }
+    } catch (error) {
+      console.error("获取用户信息失败:", error);
     }
   };
 
@@ -94,6 +108,12 @@ export default function ChatLayout({
         console.error("删除会话失败:", error);
       }
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("refresh_token");
+    router.push("/login");
   };
 
   return (
@@ -163,6 +183,42 @@ export default function ChatLayout({
                 </Card>
               ))}
             </div>
+          </div>
+          {/* User Profile Section */}
+          <div className="border-t bg-gray-50 p-4 dark:bg-gray-800">
+            {userProfile && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage
+                      src={userProfile.avatar || undefined}
+                      alt={userProfile.name || userProfile.phone}
+                    />
+                    <AvatarFallback className="bg-primary text-white">
+                      {userProfile.name?.charAt(0) ||
+                        userProfile.phone.slice(-2)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col">
+                    <p className="font-medium text-gray-900 dark:text-gray-100">
+                      {userProfile.name || `用户${userProfile.phone.slice(-4)}`}
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {userProfile.phone}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-gray-500 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
+                  onClick={handleLogout}
+                  title="退出登录"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>
